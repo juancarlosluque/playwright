@@ -1,19 +1,50 @@
-import { Given, When, Then } from "@cucumber/cucumber";
-import LoginPage from "../pages/iniciarSesionValidoPage";
+import { Given, When, Then, setDefaultTimeout } from "@cucumber/cucumber";
+import InvalidLoginPage from "../pages/iniciarSesionInvalidoPage";
 
-const loginPage = new LoginPage();
+// Set timeout for all steps in this file
+setDefaultTimeout(60000);
+
+let invalidLoginPage: InvalidLoginPage;
 
 Given('que un usuario navega hacia la página de inicio de sesión de Sauce Demo', async () => {
-    await loginPage.navigateToOrangePage();
-    await global.page.waitForTimeout(3000); // Espera 3 segundos
+    invalidLoginPage = new InvalidLoginPage();
+    await invalidLoginPage.navigateToLoginPage();
 });
 
-When('ingreso el nombre de usuario {string} y la contraseña {string}', async (user, password) => {
-    await loginPage.login(user, password);
-     await global.page.waitForTimeout(3000); // Espera 3 segundos
+When('ingreso el nombre de usuario {string} y la contraseña {string}', async (username: string, password: string) => {
+    if (!invalidLoginPage) {
+        invalidLoginPage = new InvalidLoginPage();
+    }
+    await invalidLoginPage.attemptInvalidLogin(username, password);
 });
 
 Then('debería ver un mensaje de error indicando que las credenciales son incorrectas', async () => {
-    await global.page.waitForSelector("//h3[contains(text(),'Epic sadface: Username and password do not match a')]");
-    await global.page.waitForTimeout(3000); // Espera 3 segundos
+    if (!invalidLoginPage) {
+        invalidLoginPage = new InvalidLoginPage();
+    }
+    await invalidLoginPage.verifyInvalidLoginError();
+});
+
+// Additional step definitions for invalid login scenarios
+When('el usuario intenta iniciar sesión con credenciales inválidas', async () => {
+    if (!invalidLoginPage) {
+        invalidLoginPage = new InvalidLoginPage();
+        await invalidLoginPage.navigateToLoginPage();
+    }
+    await invalidLoginPage.attemptInvalidLogin("invalid_user", "invalid_password");
+});
+
+When('el usuario intenta iniciar sesión con usuario bloqueado', async () => {
+    if (!invalidLoginPage) {
+        invalidLoginPage = new InvalidLoginPage();
+        await invalidLoginPage.navigateToLoginPage();
+    }
+    await invalidLoginPage.attemptInvalidLogin("locked_out_user", "secret_sauce");
+});
+
+Then('debería ver un mensaje de error de usuario bloqueado', async () => {
+    if (!invalidLoginPage) {
+        invalidLoginPage = new InvalidLoginPage();
+    }
+    await invalidLoginPage.verifyInvalidLoginError();
 });
